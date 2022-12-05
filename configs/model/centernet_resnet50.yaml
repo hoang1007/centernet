@@ -1,0 +1,12 @@
+defaults:
+  - default_centernet.yaml
+  - _self_
+
+net:
+  _target_: src.models.components.resnet.PoseResNet
+  block: 
+    _target_: hydra.utils.get_class
+    path: src.models.components.resnet.Bottleneck
+  head_conv: 64
+  num_layers: [3, 4, 6, 3]
+  from_pretrained: https://download.pytorch.org/models/resnet50-19c8e357.pth

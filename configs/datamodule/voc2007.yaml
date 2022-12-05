@@ -1,0 +1,7 @@
+_target_: src.datamodules.voc_datamodule.VOCDataModule
+data_dir: ${paths.data_dir}
+year: "2007"
+batch_size: 16
+train_ratio: 0.75
+num_workers: 2
+pin_memory: False
