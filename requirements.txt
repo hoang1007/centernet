@@ -1,8 +1,8 @@
 # --------- pytorch --------- #
 torch>=1.10.0
 torchvision>=0.11.0
-pytorch-lightning==1.8.1
-torchmetrics==0.10.0
+pytorch-lightning>=1.8.1
+torchmetrics>=0.10.0
 
 # --------- hydra --------- #
 hydra-core==1.2.0
@@ -21,3 +21,7 @@ pre-commit      # hooks for applying linters on commit
 rich            # beautiful text formatting in terminal
 pytest          # tests
 # sh            # for running bash commands in some tests (linux/macos only)
+
+
+# --------- augmentation --------- #
+albumenations>=1.0.0
