@@ -30,6 +30,12 @@ defaults:
 # task name, determines output directory path
 task_name: "train"
 
+# datamodule:
+#   batch_size: 4
+# model:
+#   net:
+#     num_classes: 21
+
 # tags to help you identify your experiments
 # you can overwrite this in experiment configs
 # overwrite from command line with `python train.py tags="[first_tag, second_tag]"`

@@ -130,7 +130,7 @@ class CenterNet(LightningModule):
 
         loss = 0
         for heatmap in heatmaps:
-            heatmap = torch.clamp_(torch.sigmoid_(heatmap),
+            heatmap = torch.clamp(torch.sigmoid(heatmap),
                                    min=1e-4, max=1 - 1e-4)
             pos_loss = torch.log(heatmap) * torch.pow(1 - heatmap, 2) * pos_ids
             neg_loss = torch.log(1 - heatmap) * \
