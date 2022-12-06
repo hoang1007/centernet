@@ -94,10 +94,10 @@ class CenterNet(LightningModule):
             targets.append(target)
 
         self.val_mAP.update(preds, targets)
+
+    def validation_epoch_end(self, outputs):
         self.log("val/mAP", self.val_mAP.compute()
                  ["map"], on_step=False, on_epoch=True, prog_bar=True, logger=True)
-
-        return 0
 
     def configure_optimizers(self):
         optimizer = self.optimizer(params=self.net.parameters())
@@ -131,7 +131,7 @@ class CenterNet(LightningModule):
         loss = 0
         for heatmap in heatmaps:
             heatmap = torch.clamp(torch.sigmoid(heatmap),
-                                   min=1e-4, max=1 - 1e-4)
+                                  min=1e-4, max=1 - 1e-4)
             pos_loss = torch.log(heatmap) * torch.pow(1 - heatmap, 2) * pos_ids
             neg_loss = torch.log(1 - heatmap) * \
                 torch.pow(heatmap, 2) * neg_weights * neg_ids
