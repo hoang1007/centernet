@@ -76,9 +76,12 @@ class CenterNet(LightningModule):
 
         mAP /= imgs.shape[0]
 
-        self.log("val/mAP", mAP, on_epoch=True)
-
         return mAP
+
+    def validation_epoch_end(self, outputs: Tuple[float]):
+        mAP = sum(outputs) / len(outputs)
+
+        self.log("val/mAP", mAP, on_step=False, on_epoch=True, prog_bar=True, logger=True)
 
 
     def configure_optimizers(self):
