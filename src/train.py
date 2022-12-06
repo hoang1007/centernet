@@ -1,4 +1,3 @@
-from src import utils
 from pytorch_lightning.loggers import LightningLoggerBase
 from pytorch_lightning import Callback, LightningDataModule, LightningModule, Trainer
 from omegaconf import DictConfig
@@ -13,6 +12,8 @@ root = pyrootutils.setup_root(
     pythonpath=True,
     dotenv=True,
 )
+
+from src import utils
 
 # ------------------------------------------------------------------------------------ #
 # `pyrootutils.setup_root(...)` is an optional line at the top of each entry file
