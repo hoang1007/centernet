@@ -3,6 +3,7 @@ from pytorch_lightning import LightningModule
 import torch
 from torch import nn
 from torchmetrics import MeanMetric
+from torchmetrics.detection.mean_ap import MeanAveragePrecision
 from utils import draw_umich_gaussian, gaussian_radius
 from utils import decode, avg_precision
 
@@ -27,6 +28,8 @@ class CenterNet(LightningModule):
         self.offset_loss = MeanMetric()
         self.size_loss = MeanMetric()
         self.train_loss = MeanMetric()
+
+        self.val_mAP = MeanAveragePrecision()
 
     def forward(self, x: torch.Tensor):
         return self.net(x)
@@ -57,13 +60,13 @@ class CenterNet(LightningModule):
         self.train_loss(loss)
 
         self.log("train/neg_loss", self.neg_loss,
-                 on_step=False, on_epoch=True, prog_bar=True)
+                 on_step=False, on_epoch=True, prog_bar=True, logger=True)
         self.log("train/offset_loss", self.offset_loss,
-                 on_step=False, on_epoch=True, prog_bar=True)
+                 on_step=False, on_epoch=True, prog_bar=True, logger=True)
         self.log("train/size_loss", self.size_loss,
-                 on_step=False, on_epoch=True, prog_bar=True)
+                 on_step=False, on_epoch=True, prog_bar=True, logger=True)
         self.log("train/total_loss", self.train_loss,
-                 on_step=False, on_epoch=True, prog_bar=True)
+                 on_step=False, on_epoch=True, prog_bar=True, logger=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -74,30 +77,27 @@ class CenterNet(LightningModule):
         bboxes, scores, classes = decode(
             heatmap, offset, size, downsample, top_k=100)
 
-        mAP = 0
+        preds, targets = [], []
 
-        for i in range(imgs.shape[0]):
-            bbox = bboxes[i]
-            cls = classes[i]
-            gt_box = gt_boxes[i]
-            gt_label = gt_labels[i]
+        for i in range(len(gt_boxes)):
+            pred = {
+                "boxes": bboxes[i],
+                "scores": scores[i],
+                "labels": classes[i],
+            }
+            target = {
+                "boxes": gt_boxes[i],
+                "labels": gt_labels[i],
+            }
 
-            if bbox.shape[0] == 0:
-                continue
+            preds.append(pred)
+            targets.append(target)
 
-            mAP += avg_precision(bbox, cls, gt_box, gt_label,
-                                 self.num_classes, iou_thresh=0.5)
+        self.val_mAP.update(preds, targets)
+        self.log("val/mAP", self.val_mAP.compute()
+                 ["map"], on_step=False, on_epoch=True, prog_bar=True, logger=True)
 
-        mAP /= imgs.shape[0]
-
-        return mAP
-
-    def validation_epoch_end(self, outputs: Tuple[float]):
-        mAP = sum(outputs) / len(outputs)
-
-        print(mAP)
-
-        self.log("val/mAP", mAP, prog_bar=True)
+        return 0
 
     def configure_optimizers(self):
         optimizer = self.optimizer(params=self.net.parameters())
