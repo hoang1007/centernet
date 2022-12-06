@@ -20,4 +20,3 @@ from src.utils.gaussian import (
     draw_umich_gaussian,
 )
 from src.utils.decode import decode
-from src.utils.metrics import avg_precision

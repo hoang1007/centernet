@@ -5,7 +5,7 @@ from torch import nn
 from torchmetrics import MeanMetric
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 from utils import draw_umich_gaussian, gaussian_radius
-from utils import decode, avg_precision
+from utils import decode
 
 
 class CenterNet(LightningModule):
