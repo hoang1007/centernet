@@ -75,9 +75,6 @@ class CenterNet(LightningModule):
 
         return loss
 
-    def validation_epoch_end(self, outputs):
-        self.val_loss.reset()
-
     def configure_optimizers(self):
         optimizer = self.optimizer(params=self.net.parameters())
         if self.scheduler is not None:
