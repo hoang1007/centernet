@@ -83,7 +83,7 @@ class CenterNet(LightningModule):
 
         print(mAP)
 
-        self.log("val/mAP", mAP, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log("val/mAP", mAP)
 
 
     def configure_optimizers(self):
