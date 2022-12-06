@@ -30,7 +30,7 @@ def gaussian_radius(det_size: Tuple[int, int], min_overlap=0.7):
     return min(r1, r2, r3)
 
 
-def gaussian2D(shape: Tuple[int, int], sigma: float = 1):
+def gaussian2D(shape: Tuple[int, int], sigma: float = 1, device: torch.device = None):
     """
     Generate a 2D gaussian kernel.
 
@@ -40,8 +40,8 @@ def gaussian2D(shape: Tuple[int, int], sigma: float = 1):
     """
     m, n = [(ss - 1.) / 2. for ss in shape]
     # y, x = np.ogrid[-m:m + 1, -n:n + 1]
-    y = torch.arange(-m, m + 1).view(-1, 1)
-    x = torch.arange(-n, n + 1).view(1, -1)
+    y = torch.arange(-m, m + 1, device=device).view(-1, 1)
+    x = torch.arange(-n, n + 1, device=device).view(1, -1)
 
     h = torch.exp(-(x * x + y * y) / (2 * sigma * sigma))
     h[h < torch.finfo(h.dtype).eps * h.max()] = 0
@@ -59,7 +59,7 @@ def draw_umich_gaussian(heatmap: torch.Tensor, center: Tuple[float, float], radi
         k (int): The value of the gaussian heatmap.
     """
     diameter = 2 * radius + 1
-    gaussian = gaussian2D((diameter, diameter), sigma=diameter / 6)
+    gaussian = gaussian2D((diameter, diameter), sigma=diameter / 6, device=heatmap.device)
 
     x, y = int(center[0]), int(center[1])
 

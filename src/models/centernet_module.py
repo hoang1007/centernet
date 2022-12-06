@@ -29,7 +29,7 @@ class CenterNet(LightningModule):
         return self.net(x)
 
     def training_step(self, batch, batch_idx):
-        imgs, gt_boxes, gt_labels = batch
+        imgs, gt_boxes, gt_labels = self._get_inputs(batch)
         heatmap, offset, size = self.net(imgs)
 
         downsample = heatmap.shape[-1] / imgs.shape[-1]
@@ -58,7 +58,7 @@ class CenterNet(LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        imgs, gt_boxes, gt_labels = batch
+        imgs, gt_boxes, gt_labels = self._get_inputs(batch)
         heatmap, offset, size = self.net(imgs)
 
         downsample = heatmap.shape[-1] / imgs.shape[-1]
@@ -262,3 +262,12 @@ class CenterNet(LightningModule):
         sizes_map = sizes_map.moveaxis(3, 1)
 
         return offsets_map, sizes_map, masks
+
+    def _get_inputs(self, batch) -> Tuple[torch.Tensor, Tuple[torch.Tensor], Tuple[torch.Tensor]]:
+        imgs, gt_boxes, labels = batch
+
+        # imgs = imgs.to(self.device)
+        # gt_boxes = tuple(boxes.to(self.device) for boxes in gt_boxes)
+        # labels = tuple(lbs.to(self.device) for lbs in labels)
+
+        return imgs, gt_boxes, labels
