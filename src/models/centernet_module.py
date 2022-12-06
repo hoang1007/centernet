@@ -89,7 +89,7 @@ class CenterNet(LightningModule):
                 "optimizer": optimizer,
                 "lr_scheduler": {
                     "scheduler": scheduler,
-                    "monitor": "val/loss",
+                    "monitor": "val/mAP",
                     "interval": "epoch",
                     "frequency": 1,
                 },
