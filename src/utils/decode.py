@@ -51,7 +51,7 @@ def decode(
         scores: (Tuple[torch.Tensor]): The confident scores. (B, N)
         classes: (Tuple[torch.Tensor]): The class ids. (B, N)
     """
-
+    heatmap = torch.sigmoid_(heatmap) # transform to range [0, 1]
     peak_ids, peak_scores, peak_classes = _get_peaks(heatmap, kernel_size=3)
 
     bboxes, scores, classes = [], [], []
