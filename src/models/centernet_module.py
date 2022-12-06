@@ -56,10 +56,14 @@ class CenterNet(LightningModule):
         self.size_loss(size_loss)
         self.train_loss(loss)
 
-        self.log("train/neg_loss", self.neg_loss, on_step=False, on_epoch=True, prog_bar=True)
-        self.log("train/offset_loss", self.offset_loss, on_step=False, on_epoch=True, prog_bar=True)
-        self.log("train/size_loss", self.size_loss, on_step=False, on_epoch=True, prog_bar=True)
-        self.log("train/total_loss", self.train_loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("train/neg_loss", self.neg_loss,
+                 on_step=False, on_epoch=True, prog_bar=True)
+        self.log("train/offset_loss", self.offset_loss,
+                 on_step=False, on_epoch=True, prog_bar=True)
+        self.log("train/size_loss", self.size_loss,
+                 on_step=False, on_epoch=True, prog_bar=True)
+        self.log("train/total_loss", self.train_loss,
+                 on_step=False, on_epoch=True, prog_bar=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
