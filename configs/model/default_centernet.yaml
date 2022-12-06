@@ -13,5 +13,7 @@ scheduler:
   factor: 0.1
   patience: 10
 
+gaussian_iou: 0.7
+
 net:
-  num_classes: 80
+  num_classes: ???

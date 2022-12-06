@@ -2,7 +2,6 @@ from typing import Tuple
 from pytorch_lightning import LightningModule
 import torch
 from torch import nn
-from torchmetrics import MeanMetric
 from utils import draw_umich_gaussian, gaussian_radius
 
 
@@ -13,7 +12,6 @@ class CenterNet(LightningModule):
         optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler._LRScheduler,
         gaussian_iou: float = 0.7,
-        num_classes: int = 80,
     ):
         super().__init__()
 
@@ -21,9 +19,7 @@ class CenterNet(LightningModule):
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.gaussian_iou = gaussian_iou
-        self.num_classes = num_classes
-
-        self.val_loss = MeanMetric()
+        self.num_classes = net.num_classes
 
     def forward(self, x: torch.Tensor):
         return self.net(x)
@@ -75,8 +71,7 @@ class CenterNet(LightningModule):
 
         loss = neg_loss + offset_loss + size_loss * 0.1
 
-        self.val_loss.update(loss)
-        self.log("val/loss", loss, on_step=True)
+        self.log("val/loss", loss, on_epoch=True)
 
         return loss
 
