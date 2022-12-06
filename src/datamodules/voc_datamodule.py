@@ -9,12 +9,13 @@ from albumentations.pytorch import ToTensorV2
 
 
 VOC_CLASSES = ('__background__', "aeroplane", "bicycle", "bird", "boat",
-             "bottle", "bus", "car", "cat", "chair", "cow", "diningtable", "dog",
-             "horse", "motorbike", "person", "pottedplant", "sheep", "sofa",
-             "train", "tvmonitor")
+               "bottle", "bus", "car", "cat", "chair", "cow", "diningtable", "dog",
+               "horse", "motorbike", "person", "pottedplant", "sheep", "sofa",
+               "train", "tvmonitor")
 
 VOC_MEAN = (0.485, 0.456, 0.406)
 VOC_STD = (0.229, 0.224, 0.225)
+
 
 class VOCDetectionDataset(Dataset):
     def __init__(self, root: str, year: str = "2007", image_set: str = "trainval"):
@@ -32,12 +33,12 @@ class VOCDetectionDataset(Dataset):
                 A.Normalize(mean=VOC_MEAN, std=VOC_STD),
                 ToTensorV2()
             ), bbox_params=A.BboxParams(format='pascal_voc', label_fields=['labels']))
-        
+
         self.data = VOCDetection(
             root=root,
             year=year,
             image_set=image_set,
-            download = True
+            download=True
         )
 
         self._class2idx = {name: idx for idx, name in enumerate(VOC_CLASSES)}
@@ -97,11 +98,14 @@ class VOCDataModule(LightningDataModule):
         return imgs, gt_boxes, labels
 
     def prepare_data(self):
-        VOCDetectionDataset(self.data_dir, year=self.year, image_set="trainval")
+        VOCDetectionDataset(self.data_dir, year=self.year,
+                            image_set="trainval")
 
     def setup(self, stage=None):
-        self.train_data = VOCDetectionDataset(self.data_dir, year=self.year, image_set="train")
-        self.val_data = VOCDetectionDataset(self.data_dir, year=self.year, image_set="val")
+        self.train_data = VOCDetectionDataset(
+            self.data_dir, year=self.year, image_set="train")
+        self.val_data = VOCDetectionDataset(
+            self.data_dir, year=self.year, image_set="val")
 
     def train_dataloader(self):
         return DataLoader(

@@ -1,6 +1,7 @@
 import torch
 from torchvision.ops import box_iou
 
+
 def avg_precision(all_pred_bboxes, pred_labels, all_gt_boxes, labels, num_classes, start=1, iou_thresh=0.5):
     precisions = []
     for cls_idx in range(start, num_classes):
@@ -14,12 +15,12 @@ def avg_precision(all_pred_bboxes, pred_labels, all_gt_boxes, labels, num_classe
 
         # ious.shape = (P, G)
         ious = box_iou(pred_boxes, gt_boxes)
-        
+
         # iou_argmax.shape = (P,)
         iou_argmax = ious.argmax(dim=1)
 
         k = ious[
-            torch.arange(iou_argmax.size(0), device=iou_argmax.device), 
+            torch.arange(iou_argmax.size(0), device=iou_argmax.device),
             iou_argmax
         ] > iou_thresh
 

@@ -1,3 +1,9 @@
+from src import utils
+from pytorch_lightning.loggers import LightningLoggerBase
+from pytorch_lightning import LightningDataModule, LightningModule, Trainer
+from omegaconf import DictConfig
+import hydra
+from typing import List, Tuple
 import pyrootutils
 
 root = pyrootutils.setup_root(
@@ -33,14 +39,6 @@ root = pyrootutils.setup_root(
 # https://github.com/ashleve/pyrootutils
 # ------------------------------------------------------------------------------------ #
 
-from typing import List, Tuple
-
-import hydra
-from omegaconf import DictConfig
-from pytorch_lightning import LightningDataModule, LightningModule, Trainer
-from pytorch_lightning.loggers import LightningLoggerBase
-
-from src import utils
 
 log = utils.get_pylogger(__name__)
 
@@ -68,7 +66,8 @@ def evaluate(cfg: DictConfig) -> Tuple[dict, dict]:
     model: LightningModule = hydra.utils.instantiate(cfg.model)
 
     log.info("Instantiating loggers...")
-    logger: List[LightningLoggerBase] = utils.instantiate_loggers(cfg.get("logger"))
+    logger: List[LightningLoggerBase] = utils.instantiate_loggers(
+        cfg.get("logger"))
 
     log.info(f"Instantiating trainer <{cfg.trainer._target_}>")
     trainer: Trainer = hydra.utils.instantiate(cfg.trainer, logger=logger)

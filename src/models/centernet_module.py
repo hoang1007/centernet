@@ -2,6 +2,7 @@ from typing import Tuple
 from pytorch_lightning import LightningModule
 import torch
 from torch import nn
+from torchmetrics import MeanMetric
 from utils import draw_umich_gaussian, gaussian_radius
 from utils import decode, avg_precision
 
@@ -22,6 +23,11 @@ class CenterNet(LightningModule):
         self.gaussian_iou = gaussian_iou
         self.num_classes = net.num_classes
 
+        self.neg_loss = MeanMetric()
+        self.offset_loss = MeanMetric()
+        self.size_loss = MeanMetric()
+        self.train_loss = MeanMetric()
+
     def forward(self, x: torch.Tensor):
         return self.net(x)
 
@@ -34,24 +40,26 @@ class CenterNet(LightningModule):
             gt_boxes, downsample=downsample)
 
         h, w = heatmap.shape[2:]
-        gt_heatmaps = self._produce_gt_heatmap(keypoints, gt_labels, self.num_classes, h, w)
-        gt_offsets, gt_sizes, masks = self._produce_gt_offset_and_size(keypoints, offsets, sizes, h, w)
+        gt_heatmaps = self._produce_gt_heatmap(
+            keypoints, gt_labels, self.num_classes, h, w)
+        gt_offsets, gt_sizes, masks = self._produce_gt_offset_and_size(
+            keypoints, offsets, sizes, h, w)
 
-        neg_loss = self._compute_neg_loss(heatmap,gt_heatmaps)
+        neg_loss = self._compute_neg_loss(heatmap, gt_heatmaps)
         offset_loss = self._compute_reg_loss(offset, gt_offsets, masks)
         size_loss = self._compute_reg_loss(size, gt_sizes, masks)
 
         loss = neg_loss + offset_loss + size_loss * 0.1
 
-        self.log("train/neg_loss", neg_loss, on_step=True,
-                 on_epoch=True, prog_bar=True, logger=True)
-        self.log("train/offset_loss", offset_loss, on_step=True,
-                 on_epoch=True, prog_bar=True, logger=True)
-        self.log("train/size_loss", size_loss, on_step=True,
-                 on_epoch=True, prog_bar=True, logger=True)
-        self.log("train/loss", loss, on_step=True,
-                 on_epoch=True, prog_bar=True, logger=True)
+        self.neg_loss(neg_loss)
+        self.offset_loss(offset_loss)
+        self.size_loss(size_loss)
+        self.train_loss(loss)
 
+        self.log("train/neg_loss", self.neg_loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("train/offset_loss", self.offset_loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("train/size_loss", self.size_loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("train/total_loss", self.train_loss, on_step=False, on_epoch=True, prog_bar=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -59,7 +67,8 @@ class CenterNet(LightningModule):
         heatmap, offset, size = self.net(imgs)
 
         downsample = heatmap.shape[-1] / imgs.shape[-1]
-        bboxes, scores, classes = decode(heatmap, offset, size, downsample, top_k=100)
+        bboxes, scores, classes = decode(
+            heatmap, offset, size, downsample, top_k=100)
 
         mAP = 0
 
@@ -72,7 +81,8 @@ class CenterNet(LightningModule):
             if bbox.shape[0] == 0:
                 continue
 
-            mAP += avg_precision(bbox, cls, gt_box, gt_label, self.num_classes, iou_thresh=0.5)
+            mAP += avg_precision(bbox, cls, gt_box, gt_label,
+                                 self.num_classes, iou_thresh=0.5)
 
         mAP /= imgs.shape[0]
 
@@ -83,8 +93,7 @@ class CenterNet(LightningModule):
 
         print(mAP)
 
-        self.log("val/mAP", mAP)
-
+        self.log("val/mAP", mAP, prog_bar=True)
 
     def configure_optimizers(self):
         optimizer = self.optimizer(params=self.net.parameters())
@@ -179,7 +188,7 @@ class CenterNet(LightningModule):
             centers = downsample * (tl + br) / 2
             keypoints_ = centers.int()
             offsets_ = centers - keypoints_
-            sizes_ = br - tl + 1
+            sizes_ = br - tl
             keypoints.append(keypoints_)
             offsets.append(offsets_)
             sizes.append(sizes_)
@@ -221,7 +230,8 @@ class CenterNet(LightningModule):
                     int(gaussian_radius((height, width),
                         min_overlap=self.gaussian_iou))
                 )
-                draw_umich_gaussian(gt_heatmaps[batch_idx, class_id], keypoint, radius)
+                draw_umich_gaussian(
+                    gt_heatmaps[batch_idx, class_id], keypoint, radius)
 
         return gt_heatmaps
 
