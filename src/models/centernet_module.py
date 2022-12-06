@@ -3,6 +3,7 @@ from pytorch_lightning import LightningModule
 import torch
 from torch import nn
 from utils import draw_umich_gaussian, gaussian_radius
+from utils import decode, avg_precision
 
 
 class CenterNet(LightningModule):
@@ -58,22 +59,27 @@ class CenterNet(LightningModule):
         heatmap, offset, size = self.net(imgs)
 
         downsample = heatmap.shape[-1] / imgs.shape[-1]
-        keypoints, offsets, sizes = self._get_object_params(
-            gt_boxes, downsample=downsample)
+        bboxes, scores, classes = decode(heatmap, offset, size, downsample, top_k=100)
 
-        h, w = heatmap.shape[2:]
-        gt_heatmaps = self._produce_gt_heatmap(keypoints, gt_labels, self.num_classes, h, w)
-        gt_offsets, gt_sizes, masks = self._produce_gt_offset_and_size(keypoints, offsets, sizes, h, w)
+        mAP = 0
 
-        neg_loss = self._compute_neg_loss(heatmap,gt_heatmaps)
-        offset_loss = self._compute_reg_loss(offset, gt_offsets, masks)
-        size_loss = self._compute_reg_loss(size, gt_sizes, masks)
+        for i in range(imgs.shape[0]):
+            bbox = bboxes[i]
+            cls = classes[i]
+            gt_box = gt_boxes[i]
+            gt_label = gt_labels[i]
 
-        loss = neg_loss + offset_loss + size_loss * 0.1
+            if bbox.shape[0] == 0:
+                continue
 
-        self.log("val/loss", loss, on_epoch=True)
+            mAP += avg_precision(bbox, cls, gt_box, gt_label, self.num_classes, iou_thresh=0.5)
 
-        return loss
+        mAP /= imgs.shape[0]
+
+        self.log("val/mAP", mAP, on_epoch=True)
+
+        return mAP
+
 
     def configure_optimizers(self):
         optimizer = self.optimizer(params=self.net.parameters())
@@ -127,11 +133,11 @@ class CenterNet(LightningModule):
         Compute the regression loss for the offset and size.
 
         Args:
-            regs (torch.Tensor): The predicted offset and size. (B, 2, H, W)
-            gt_regs (torch.Tensor): The ground truth offset and size. (B, 2, H, W)
+            regs (torch.Tensor): The predicted offset and size. (B, H, W, 2)
+            gt_regs (torch.Tensor): The ground truth offset and size. (B, H, W, 2)
             masks (torch.BoolTensor): The mask for the offset and size `True` is object else `False`. (B, H, W)
         """
-        masks = masks.float().unsqueeze_(1)
+        masks = masks.float().unsqueeze_(-1)
         mask_num = masks.float().sum()
 
         regs = regs * masks
@@ -164,10 +170,11 @@ class CenterNet(LightningModule):
         sizes = []
 
         for boxes in gt_boxes:
-            centers = downsample * (boxes[:, :2] + boxes[:, 2:]) / 2
+            tl, br = boxes[:, :2], boxes[:, 2:]
+            centers = downsample * (tl + br) / 2
             keypoints_ = centers.int()
             offsets_ = centers - keypoints_
-            sizes_ = boxes[:, 2:] - boxes[:, :2] + 1
+            sizes_ = br - tl + 1
             keypoints.append(keypoints_)
             offsets.append(offsets_)
             sizes.append(sizes_)
@@ -232,8 +239,8 @@ class CenterNet(LightningModule):
             width (int): The width of the feature map. (W)
 
         Returns:
-            offset_map: (torch.Tensor): The ground truth offsets. (B, 2, H, W)
-            size_map: (torch.Tensor): The ground truth sizes. (B, 2, H, W)
+            offset_map: (torch.Tensor): The ground truth offsets. (B, H, W, 2)
+            size_map: (torch.Tensor): The ground truth sizes. (B, H, W, 2)
             mask: (torch.BoolTensor): The mask for the offset and size `True` is object else `False`. (B, H, W)
         """
 
@@ -249,9 +256,6 @@ class CenterNet(LightningModule):
             offsets_map[batch_idx, y, x] = ofs
             sizes_map[batch_idx, y, x] = szs
             masks[batch_idx, y, x] = True
-
-        offsets_map = offsets_map.moveaxis(3, 1)
-        sizes_map = sizes_map.moveaxis(3, 1)
 
         return offsets_map, sizes_map, masks
 

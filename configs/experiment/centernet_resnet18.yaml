@@ -36,9 +36,9 @@ logger:
 
 callbacks:
   model_checkpoint:
-    monitor: "val/loss"
+    monitor: "val/mAP"
     mode: "min"
   early_stopping:
-    monitor: "val/loss"
+    monitor: "val/mAP"
 
 test: False # Ignore test phase

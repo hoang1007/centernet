@@ -175,6 +175,10 @@ class PoseResNet(nn.Module):
         offset = self.offset_layer(x)
         dimension = self.dimension_layer(x)
 
+        # (B, 2, H, W) -> (B, H, W, 2)
+        offset = offset.moveaxis(1, -1)
+        dimension = dimension.moveaxis(1, -1)
+
         return heatmap, offset, dimension
 
     def _make_sub_layer(
