@@ -4,8 +4,8 @@ import torch
 from torch import nn
 from torchmetrics import MeanMetric
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
-from utils import draw_umich_gaussian, gaussian_radius
-from utils import decode
+from src.utils import draw_umich_gaussian, gaussian_radius
+from src.utils import decode
 
 
 class CenterNet(LightningModule):
@@ -98,6 +98,23 @@ class CenterNet(LightningModule):
     def validation_epoch_end(self, outputs):
         self.log("val/mAP", self.val_mAP.compute()
                  ["map"], on_step=False, on_epoch=True, prog_bar=True, logger=True)
+
+    @torch.no_grad()
+    def predict(self, imgs: torch.Tensor):
+        from torchvision.ops import batched_nms
+
+        heatmap, offset, size = self.net(imgs)
+        downsample = heatmap.shape[-1] / imgs.shape[-1]
+        bboxes, scores, classes = decode(
+            heatmap, offset, size, downsample, top_k=100)
+
+        for i in range(len(bboxes)):
+            keep = batched_nms(bboxes[i], scores[i], classes[i], 0.5)
+            bboxes[i] = bboxes[i][keep]
+            scores[i] = scores[i][keep]
+            classes[i] = classes[i][keep]
+
+        return bboxes, scores, classes
 
     def configure_optimizers(self):
         optimizer = self.optimizer(params=self.net.parameters())

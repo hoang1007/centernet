@@ -77,7 +77,7 @@ def decode(
         xmax = center_xs + ws / 2
         ymax = center_ys + hs / 2
 
-        bboxes.append(torch.stack((xmin, ymin, xmax, ymax), dim=1).int())
+        bboxes.append(torch.stack((xmin, ymin, xmax, ymax), dim=1))
         scores.append(peak_score)
         classes.append(peak_class)
 

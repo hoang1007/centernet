@@ -3,7 +3,7 @@ from typing import Type, List, Tuple
 import torch
 from torch import nn
 from .dcnv2 import DeformableConv2d
-from utils import fill_upsample_weights, fill_fc_weights
+from src.utils import fill_upsample_weights, fill_fc_weights
 
 
 def conv3x3(in_planes: int, out_planes: int, stride=1):
