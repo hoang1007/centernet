@@ -155,6 +155,8 @@ class PoseResNet(nn.Module):
             fill_fc_weights(self.dimension_layer)
 
     def init_weights(self, pretrained_path: str):
+        print("Loading pretrained model...")
+
         if pretrained_path.startswith('http'):
             pretrained = torch.hub.load_state_dict_from_url(
                 pretrained_path, progress=True)
@@ -163,12 +165,27 @@ class PoseResNet(nn.Module):
         else:
             print(f"Pretrained model not found at {pretrained_path}")
 
-        self.load_state_dict(pretrained, strict=False)
+        try:
+            self.load_state_dict(pretrained, strict=False)
 
-        for _, m in self.deconv_layers.named_modules():
-            if isinstance(m, nn.BatchNorm2d):
-                torch.nn.init.constant_(m.weight, 1)
-                torch.nn.init.constant_(m.bias, 0)
+            for _, m in self.deconv_layers.named_modules():
+                if isinstance(m, nn.BatchNorm2d):
+                    torch.nn.init.constant_(m.weight, 1)
+                    torch.nn.init.constant_(m.bias, 0)
+
+            def freeze_weight(model: nn.Module):
+                for name, param in model.named_parameters():
+                    if param.requires_grad:
+                        param.requires_grad = False
+
+            freeze_weight(self.conv1)
+            freeze_weight(self.bn1)
+            freeze_weight(self.layer1)
+            freeze_weight(self.layer2)
+            freeze_weight(self.layer3)
+        except:
+            print("Pretrained model not loaded")
+
 
     def forward(self, x: torch.Tensor):
         x = self.conv1(x)
