@@ -18,7 +18,7 @@ class CenterNet(LightningModule):
     ):
         super().__init__()
 
-        self.save_hyperparameters()
+        self.save_hyperparameters(ignore=["net"])
 
         self.net = net
         self.optimizer = optimizer
