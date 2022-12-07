@@ -1,5 +1,5 @@
 import os
-from typing import Type, List, Tuple
+from typing import List, Tuple
 import torch
 from torch import nn
 from .dcnv2 import DeformableConv2d
@@ -105,7 +105,7 @@ class Bottleneck(nn.Module):
 class PoseResNet(nn.Module):
     def __init__(
         self,
-        block: Type[BasicBlock] | Type[Bottleneck],
+        block: BasicBlock | Bottleneck,
         head_conv: int,
         num_layers: Tuple[int],
         num_classes: int,
@@ -211,7 +211,7 @@ class PoseResNet(nn.Module):
 
     def _make_layer(
         self,
-        block: Type[BasicBlock] | Type[Bottleneck],
+        block: BasicBlock | Bottleneck,
         planes: int,
         num_blocks: int,
         stride: int = 1,
