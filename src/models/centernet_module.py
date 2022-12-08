@@ -42,13 +42,16 @@ class CenterNet(LightningModule):
 
         downsample = heatmap.shape[-1] / imgs.shape[-1]
         keypoints, offsets, sizes = self._get_object_params(
-            gt_boxes, downsample=downsample)
+            gt_boxes, downsample=downsample
+        )
 
         h, w = heatmap.shape[2:]
         gt_heatmaps = self._produce_gt_heatmap(
-            keypoints, gt_labels, self.num_classes, h, w)
+            keypoints, gt_labels, self.num_classes, h, w
+        )
         gt_offsets, gt_sizes, masks = self._produce_gt_offset_and_size(
-            keypoints, offsets, sizes, h, w)
+            keypoints, offsets, sizes, h, w
+        )
 
         neg_loss = self._compute_neg_loss(heatmap, gt_heatmaps)
         offset_loss = self._compute_reg_loss(offset, gt_offsets, masks)
@@ -61,14 +64,38 @@ class CenterNet(LightningModule):
         self.size_loss(size_loss)
         self.train_loss(loss)
 
-        self.log("train/neg_loss", self.neg_loss,
-                 on_step=False, on_epoch=True, prog_bar=True, logger=True)
-        self.log("train/offset_loss", self.offset_loss,
-                 on_step=False, on_epoch=True, prog_bar=True, logger=True)
-        self.log("train/size_loss", self.size_loss,
-                 on_step=False, on_epoch=True, prog_bar=True, logger=True)
-        self.log("train/total_loss", self.train_loss,
-                 on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log(
+            "train/neg_loss",
+            self.neg_loss,
+            on_step=False,
+            on_epoch=True,
+            prog_bar=True,
+            logger=True,
+        )
+        self.log(
+            "train/offset_loss",
+            self.offset_loss,
+            on_step=False,
+            on_epoch=True,
+            prog_bar=True,
+            logger=True,
+        )
+        self.log(
+            "train/size_loss",
+            self.size_loss,
+            on_step=False,
+            on_epoch=True,
+            prog_bar=True,
+            logger=True,
+        )
+        self.log(
+            "train/total_loss",
+            self.train_loss,
+            on_step=False,
+            on_epoch=True,
+            prog_bar=True,
+            logger=True,
+        )
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -76,8 +103,7 @@ class CenterNet(LightningModule):
         heatmap, offset, size = self.net(imgs)
 
         downsample = heatmap.shape[-1] / imgs.shape[-1]
-        bboxes, scores, classes = decode(
-            heatmap, offset, size, downsample, top_k=100)
+        bboxes, scores, classes = decode(heatmap, offset, size, downsample, top_k=100)
 
         preds, targets = [], []
 
@@ -98,8 +124,14 @@ class CenterNet(LightningModule):
         self.val_mAP.update(preds, targets)
 
     def validation_epoch_end(self, outputs):
-        self.log("val/mAP", self.val_mAP.compute()
-                 ["map"], on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log(
+            "val/mAP",
+            self.val_mAP.compute()["map"],
+            on_step=False,
+            on_epoch=True,
+            prog_bar=True,
+            logger=True,
+        )
 
     @torch.no_grad()
     def predict(self, imgs: torch.Tensor):
@@ -107,8 +139,7 @@ class CenterNet(LightningModule):
 
         heatmap, offset, size = self.net(imgs)
         downsample = heatmap.shape[-1] / imgs.shape[-1]
-        bboxes, scores, classes = decode(
-            heatmap, offset, size, downsample, top_k=100)
+        bboxes, scores, classes = decode(heatmap, offset, size, downsample, top_k=100)
 
         for i in range(len(bboxes)):
             keep = batched_nms(bboxes[i], scores[i], classes[i], 0.5)
@@ -148,24 +179,26 @@ class CenterNet(LightningModule):
         neg_weights = torch.pow(1 - gt_heatmaps, 4)
 
         loss = 0
-        for heatmap in heatmaps:
-            heatmap = torch.clamp(torch.sigmoid(heatmap),
-                                  min=1e-4, max=1 - 1e-4)
-            pos_loss = torch.log(heatmap) * torch.pow(1 - heatmap, 2) * pos_ids
-            neg_loss = torch.log(1 - heatmap) * \
-                torch.pow(heatmap, 2) * neg_weights * neg_ids
 
-            num_pos = pos_ids.float().sum()
-            pos_loss = pos_loss.sum()
-            neg_loss = neg_loss.sum()
+        pos_loss = torch.log(heatmaps) * torch.pow(1 - heatmaps, 2) * pos_ids
+        neg_loss = (
+            torch.log(1 - heatmaps) * torch.pow(heatmaps, 2) * neg_weights * neg_ids
+        )
 
-            if num_pos == 0:
-                loss = loss - neg_loss
-            else:
-                loss = loss - (pos_loss + neg_loss) / num_pos
-        return loss / len(heatmaps)
+        num_pos = pos_ids.float().sum()
+        pos_loss = pos_loss.sum()
+        neg_loss = neg_loss.sum()
 
-    def _compute_reg_loss(self, regs: torch.Tensor, gt_regs: torch.Tensor, masks: torch.BoolTensor):
+        if num_pos == 0:
+            loss = loss - neg_loss
+        else:
+            loss = loss - (pos_loss + neg_loss) / num_pos
+
+        return loss
+
+    def _compute_reg_loss(
+        self, regs: torch.Tensor, gt_regs: torch.Tensor, masks: torch.BoolTensor
+    ):
         """
         Compute the regression loss for the offset and size.
 
@@ -180,15 +213,13 @@ class CenterNet(LightningModule):
         regs = regs * masks
         gt_regs = gt_regs * masks
 
-        loss = nn.functional.l1_loss(regs, gt_regs, reduction='sum')
+        loss = nn.functional.smooth_l1_loss(regs, gt_regs, reduction="sum")
 
-        return loss / mask_num
+        loss = loss / (mask_num + 1e-4)
 
-    def _get_object_params(
-        self,
-        gt_boxes: Tuple[torch.Tensor],
-        downsample: int
-    ):
+        return loss
+
+    def _get_object_params(self, gt_boxes: Tuple[torch.Tensor], downsample: int):
         """
         Get the keypoints and offsets in the feature map from the ground truth boxes.
 
@@ -240,21 +271,21 @@ class CenterNet(LightningModule):
             torch.Tensor: The ground truth heatmap. (B, C, H, W)
         """
 
-        gt_heatmaps = torch.zeros((
-            len(keypoints),
-            num_classes,
-            height, width
-        ), dtype=torch.float32, device=keypoints[0].device)
+        gt_heatmaps = torch.zeros(
+            (len(keypoints), num_classes, height, width),
+            dtype=torch.float32,
+            device=keypoints[0].device,
+        )
 
         for batch_idx, (kps, cids) in enumerate(zip(keypoints, class_ids)):
             for keypoint, class_id in zip(kps, cids):
                 radius = max(
                     0,
-                    int(gaussian_radius((height, width),
-                        min_overlap=self.gaussian_iou))
+                    int(
+                        gaussian_radius((height, width), min_overlap=self.gaussian_iou)
+                    ),
                 )
-                draw_umich_gaussian(
-                    gt_heatmaps[batch_idx, class_id], keypoint, radius)
+                draw_umich_gaussian(gt_heatmaps[batch_idx, class_id], keypoint, radius)
 
         return gt_heatmaps
 
@@ -283,11 +314,16 @@ class CenterNet(LightningModule):
         """
 
         offsets_map = torch.zeros(
-            (len(keypoints), height, width, 2), device=keypoints[0].device)
+            (len(keypoints), height, width, 2), device=keypoints[0].device
+        )
         sizes_map = torch.zeros(
-            (len(keypoints), height, width, 2), device=keypoints[0].device)
-        masks = torch.zeros((len(keypoints), height, width),
-                            device=keypoints[0].device, dtype=torch.bool)
+            (len(keypoints), height, width, 2), device=keypoints[0].device
+        )
+        masks = torch.zeros(
+            (len(keypoints), height, width),
+            device=keypoints[0].device,
+            dtype=torch.bool,
+        )
 
         for batch_idx, (kps, ofs, szs) in enumerate(zip(keypoints, offsets, sizes)):
             x, y = kps[:, 0].long(), kps[:, 1].long()
@@ -297,7 +333,9 @@ class CenterNet(LightningModule):
 
         return offsets_map, sizes_map, masks
 
-    def _get_inputs(self, batch) -> Tuple[torch.Tensor, Tuple[torch.Tensor], Tuple[torch.Tensor]]:
+    def _get_inputs(
+        self, batch
+    ) -> Tuple[torch.Tensor, Tuple[torch.Tensor], Tuple[torch.Tensor]]:
         imgs, gt_boxes, labels = batch
 
         # imgs = imgs.to(self.device)

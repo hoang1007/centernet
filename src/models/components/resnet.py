@@ -2,18 +2,15 @@ import os
 from typing import List, Tuple, Union, Type
 import torch
 from torch import nn
-from .dcnv2 import DeformableConv2d
+
+# from .dcnv2 import DeformableConv2d
+from torchvision.ops import DeformConv2d
 from src.utils import fill_upsample_weights, fill_fc_weights
 
 
 def conv3x3(in_planes: int, out_planes: int, stride=1):
     return nn.Conv2d(
-        in_planes,
-        out_planes,
-        kernel_size=3,
-        stride=stride,
-        padding=1,
-        bias=False
+        in_planes, out_planes, kernel_size=3, stride=stride, padding=1, bias=False
     )
 
 
@@ -69,11 +66,13 @@ class Bottleneck(nn.Module):
 
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
-        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3,
-                               stride=stride, padding=1, bias=False)
+        self.conv2 = nn.Conv2d(
+            planes, planes, kernel_size=3, stride=stride, padding=1, bias=False
+        )
         self.bn2 = nn.BatchNorm2d(planes)
         self.conv3 = nn.Conv2d(
-            planes, planes * self.expansion, kernel_size=1, bias=False)
+            planes, planes * self.expansion, kernel_size=1, bias=False
+        )
         self.bn3 = nn.BatchNorm2d(planes * self.expansion)
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
@@ -109,7 +108,7 @@ class PoseResNet(nn.Module):
         head_conv: int,
         num_layers: Tuple[int],
         num_classes: int,
-        from_pretrained: str = None
+        from_pretrained: str = None,
     ):
         super().__init__()
 
@@ -121,32 +120,29 @@ class PoseResNet(nn.Module):
         self.num_classes = num_classes
 
         self.conv1 = nn.Conv2d(
-            3, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False)
+            3, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False
+        )
         self.bn1 = nn.BatchNorm2d(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
-        self.layer1 = self._make_layer(
-            block, self.planes[0], num_layers[0], stride=1)
-        self.layer2 = self._make_layer(
-            block, self.planes[1], num_layers[1], stride=2)
-        self.layer3 = self._make_layer(
-            block, self.planes[2], num_layers[2], stride=2)
-        self.layer4 = self._make_layer(
-            block, self.planes[3], num_layers[3], stride=2)
+        self.layer1 = self._make_layer(block, self.planes[0], num_layers[0], stride=1)
+        self.layer2 = self._make_layer(block, self.planes[1], num_layers[1], stride=2)
+        self.layer3 = self._make_layer(block, self.planes[2], num_layers[2], stride=2)
+        self.layer4 = self._make_layer(block, self.planes[3], num_layers[3], stride=2)
 
         self.deconv_layers = self._make_deconv_layer(
             num_layers=3,
             filters_size=self.deconv_filters_size,
-            kernels_size=self.devonv_kernels_size
+            kernels_size=self.devonv_kernels_size,
         )
 
         deconv_inplanes = self.deconv_filters_size[-1]
         self.heatmap_layer = self._make_sub_layer(
-            deconv_inplanes, head_conv, self.num_classes)
+            deconv_inplanes, head_conv, self.num_classes
+        )
         self.offset_layer = self._make_sub_layer(deconv_inplanes, head_conv, 2)
-        self.dimension_layer = self._make_sub_layer(
-            deconv_inplanes, head_conv, 2)
+        self.dimension_layer = self._make_sub_layer(deconv_inplanes, head_conv, 2)
 
         if from_pretrained:
             self.init_weights(from_pretrained)
@@ -157,9 +153,10 @@ class PoseResNet(nn.Module):
     def init_weights(self, pretrained_path: str):
         print("Loading pretrained model...")
 
-        if pretrained_path.startswith('http'):
+        if pretrained_path.startswith("http"):
             pretrained = torch.hub.load_state_dict_from_url(
-                pretrained_path, progress=True)
+                pretrained_path, progress=True
+            )
         elif os.path.isfile(pretrained_path):
             pretrained = torch.load(pretrained_path)
         else:
@@ -185,7 +182,6 @@ class PoseResNet(nn.Module):
             freeze_weight(self.layer3)
         except:
             print("Pretrained model not loaded")
-
 
     def forward(self, x: torch.Tensor):
         x = self.conv1(x)
@@ -220,8 +216,9 @@ class PoseResNet(nn.Module):
         Make a sub layer that produces a heatmap, offset, or dimension.
         """
         return nn.Sequential(
-            nn.Conv2d(inplanes, head_conv, kernel_size=3,
-                      stride=1, padding=1, bias=True),
+            nn.Conv2d(
+                inplanes, head_conv, kernel_size=3, stride=1, padding=1, bias=True
+            ),
             nn.ReLU(inplace=True),
             nn.Conv2d(head_conv, planes, kernel_size=1, bias=True),
         )
@@ -236,8 +233,13 @@ class PoseResNet(nn.Module):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
-                nn.Conv2d(self.inplanes, planes * block.expansion,
-                          kernel_size=1, stride=stride, bias=False),
+                nn.Conv2d(
+                    self.inplanes,
+                    planes * block.expansion,
+                    kernel_size=1,
+                    stride=stride,
+                    bias=False,
+                ),
                 nn.BatchNorm2d(planes * block.expansion),
             )
 
@@ -272,20 +274,29 @@ class PoseResNet(nn.Module):
         kernels_size: Tuple[int],
     ):
         assert num_layers == len(
-            filters_size), "ERROR: num_deconv_layers is different len(num_deconv_filters)"
+            filters_size
+        ), "ERROR: num_deconv_layers is different len(num_deconv_filters)"
         assert num_layers == len(
-            kernels_size), "ERROR: num_deconv_layers is different len(num_deconv_filters)"
+            kernels_size
+        ), "ERROR: num_deconv_layers is different len(num_deconv_filters)"
 
         layers = []
         for i in range(num_layers):
-            kernel, padding, output_padding = self._get_deconv_cfg(
-                kernels_size[i], i)
+            kernel, padding, output_padding = self._get_deconv_cfg(kernels_size[i], i)
 
             planes = filters_size[i]
-            fc = DeformableConv2d(
+            # fc = DeformableConv2d(
+            #     in_channels=self.inplanes, out_channels=planes, kernel_size=3
+            # )
+            fc = DeformConv2d(
                 in_channels=self.inplanes,
                 out_channels=planes,
-                kernel_size=3
+                kernel_size=3,
+                stride=1,
+                padding=1,
+                dilation=1,
+                groups=1,
+                bias=True
             )
 
             up = nn.ConvTranspose2d(
@@ -301,13 +312,15 @@ class PoseResNet(nn.Module):
             fill_upsample_weights(up)
 
             self.inplanes = planes
-            layers.extend((
-                fc,
-                nn.BatchNorm2d(planes),
-                nn.ReLU(inplace=True),
-                up,
-                nn.BatchNorm2d(planes),
-                nn.ReLU(inplace=True),
-            ))
+            layers.extend(
+                (
+                    fc,
+                    nn.BatchNorm2d(planes),
+                    nn.ReLU(inplace=True),
+                    up,
+                    nn.BatchNorm2d(planes),
+                    nn.ReLU(inplace=True),
+                )
+            )
 
         return nn.Sequential(*layers)

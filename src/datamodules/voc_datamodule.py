@@ -8,10 +8,29 @@ import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
 
-VOC_CLASSES = ('__background__', "aeroplane", "bicycle", "bird", "boat",
-               "bottle", "bus", "car", "cat", "chair", "cow", "diningtable", "dog",
-               "horse", "motorbike", "person", "pottedplant", "sheep", "sofa",
-               "train", "tvmonitor")
+VOC_CLASSES = (
+    "__background__",
+    "aeroplane",
+    "bicycle",
+    "bird",
+    "boat",
+    "bottle",
+    "bus",
+    "car",
+    "cat",
+    "chair",
+    "cow",
+    "diningtable",
+    "dog",
+    "horse",
+    "motorbike",
+    "person",
+    "pottedplant",
+    "sheep",
+    "sofa",
+    "train",
+    "tvmonitor",
+)
 
 VOC_MEAN = (0.485, 0.456, 0.406)
 VOC_STD = (0.229, 0.224, 0.225)
@@ -20,25 +39,28 @@ VOC_STD = (0.229, 0.224, 0.225)
 class VOCDetectionDataset(Dataset):
     def __init__(self, root: str, year: str = "2007", image_set: str = "trainval"):
         if image_set == "train":
-            self.transform = A.Compose((
-                A.Resize(512, 512),
-                A.HorizontalFlip(p=0.5),
-                A.Normalize(mean=VOC_MEAN, std=VOC_STD),
-                A.RandomBrightnessContrast(p=0.2),
-                ToTensorV2()
-            ), bbox_params=A.BboxParams(format='pascal_voc', label_fields=['labels']))
+            self.transform = A.Compose(
+                (
+                    A.Resize(512, 512),
+                    A.HorizontalFlip(p=0.5),
+                    A.Normalize(mean=VOC_MEAN, std=VOC_STD),
+                    A.RandomBrightnessContrast(p=0.2),
+                    ToTensorV2(),
+                ),
+                bbox_params=A.BboxParams(format="pascal_voc", label_fields=["labels"]),
+            )
         else:
-            self.transform = A.Compose((
-                A.Resize(512, 512),
-                A.Normalize(mean=VOC_MEAN, std=VOC_STD),
-                ToTensorV2()
-            ), bbox_params=A.BboxParams(format='pascal_voc', label_fields=['labels']))
+            self.transform = A.Compose(
+                (
+                    A.Resize(512, 512),
+                    A.Normalize(mean=VOC_MEAN, std=VOC_STD),
+                    ToTensorV2(),
+                ),
+                bbox_params=A.BboxParams(format="pascal_voc", label_fields=["labels"]),
+            )
 
         self.data = VOCDetection(
-            root=root,
-            year=year,
-            image_set=image_set,
-            download=True
+            root=root, year=year, image_set=image_set, download=True
         )
 
         self._class2idx = {name: idx for idx, name in enumerate(VOC_CLASSES)}
@@ -52,9 +74,9 @@ class VOCDetectionDataset(Dataset):
 
         gt_boxes, labels = [], []
 
-        for obj_info in info['annotation']['object']:
-            label_name = obj_info['name']
-            bndbox = [int(k) for k in obj_info['bndbox'].values()]
+        for obj_info in info["annotation"]["object"]:
+            label_name = obj_info["name"]
+            bndbox = [int(k) for k in obj_info["bndbox"].values()]
 
             gt_boxes.append(bndbox)
             labels.append(self._class2idx[label_name])
@@ -98,14 +120,15 @@ class VOCDataModule(LightningDataModule):
         return imgs, gt_boxes, labels
 
     def prepare_data(self):
-        VOCDetectionDataset(self.data_dir, year=self.year,
-                            image_set="trainval")
+        VOCDetectionDataset(self.data_dir, year=self.year, image_set="trainval")
 
     def setup(self, stage=None):
         self.train_data = VOCDetectionDataset(
-            self.data_dir, year=self.year, image_set="train")
+            self.data_dir, year=self.year, image_set="train"
+        )
         self.val_data = VOCDetectionDataset(
-            self.data_dir, year=self.year, image_set="val")
+            self.data_dir, year=self.year, image_set="val"
+        )
 
     def train_dataloader(self):
         return DataLoader(
