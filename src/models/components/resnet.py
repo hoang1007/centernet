@@ -3,8 +3,7 @@ from typing import List, Tuple, Union, Type
 import torch
 from torch import nn
 
-# from .dcnv2 import DeformableConv2d
-from torchvision.ops import DeformConv2d
+from .dcnv2 import DeformableConv2d
 from src.utils import fill_upsample_weights, fill_fc_weights
 
 
@@ -288,7 +287,7 @@ class PoseResNet(nn.Module):
             # fc = DeformableConv2d(
             #     in_channels=self.inplanes, out_channels=planes, kernel_size=3
             # )
-            fc = DeformConv2d(
+            fc = DeformableConv2d(
                 in_channels=self.inplanes,
                 out_channels=planes,
                 kernel_size=3,
@@ -296,7 +295,7 @@ class PoseResNet(nn.Module):
                 padding=1,
                 dilation=1,
                 groups=1,
-                bias=True
+                bias=True,
             )
 
             up = nn.ConvTranspose2d(

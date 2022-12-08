@@ -9,7 +9,15 @@ from torch import nn
 
 class DeformableConv2d(nn.Module):
     def __init__(
-        self, in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False
+        self,
+        in_channels,
+        out_channels,
+        kernel_size=3,
+        stride=1,
+        padding=1,
+        groups=1,
+        dilation=1,
+        bias=False,
     ):
 
         super(DeformableConv2d, self).__init__()
@@ -52,6 +60,8 @@ class DeformableConv2d(nn.Module):
             kernel_size=kernel_size,
             stride=stride,
             padding=self.padding,
+            groups=groups,
+            dilation=dilation,
             bias=bias,
         )
 
