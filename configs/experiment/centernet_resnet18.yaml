@@ -18,13 +18,12 @@ seed: 188
 
 trainer:
   min_epochs: 10
-  max_epochs: 50
-  gradient_clip_val: 1.0
-  check_val_every_n_epoch: 3
+  max_epochs: 120
+  check_val_every_n_epoch: 6
 
 model:
   optimizer:
-    lr: 0.001
+    lr: 0.0005
   net:
     num_classes: 21
 
