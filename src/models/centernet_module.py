@@ -134,7 +134,7 @@ class CenterNet(LightningModule):
         )
 
     @torch.no_grad()
-    def predict(self, imgs: torch.Tensor):
+    def predict(self, imgs: torch.Tensor, iou_threshold: float = 0.5):
         from torchvision.ops import batched_nms
 
         heatmap, offset, size = self.net(imgs)
@@ -142,7 +142,7 @@ class CenterNet(LightningModule):
         bboxes, scores, classes = decode(heatmap, offset, size, downsample, top_k=100)
 
         for i in range(len(bboxes)):
-            keep = batched_nms(bboxes[i], scores[i], classes[i], 0.5)
+            keep = batched_nms(bboxes[i], scores[i], classes[i], iou_threshold)
             bboxes[i] = bboxes[i][keep]
             scores[i] = scores[i][keep]
             classes[i] = classes[i][keep]
@@ -178,7 +178,8 @@ class CenterNet(LightningModule):
 
         neg_weights = torch.pow(1 - gt_heatmaps, 4)
 
-        heatmaps = torch.clamp(torch.sigmoid(heatmaps), min=1e-4, max=1 - 1e-4)
+        # heatmaps = torch.clamp(torch.sigmoid(heatmaps), min=1e-4, max=1 - 1e-4)
+        heatmaps = torch.sigmoid(heatmaps)
 
         loss = 0
 
