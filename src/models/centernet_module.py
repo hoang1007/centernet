@@ -178,8 +178,8 @@ class CenterNet(LightningModule):
 
         neg_weights = torch.pow(1 - gt_heatmaps, 4)
 
-        # heatmaps = torch.clamp(torch.sigmoid(heatmaps), min=1e-4, max=1 - 1e-4)
-        heatmaps = torch.sigmoid(heatmaps)
+        heatmaps = torch.clamp(torch.sigmoid(heatmaps), min=1e-4, max=1 - 1e-4)
+        # heatmaps = torch.sigmoid(heatmaps)
 
         loss = 0
 

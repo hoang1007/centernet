@@ -143,11 +143,16 @@ class PoseResNet(nn.Module):
         self.offset_layer = self._make_sub_layer(deconv_inplanes, head_conv, 2)
         self.dimension_layer = self._make_sub_layer(deconv_inplanes, head_conv, 2)
 
+        fill_fc_weights(self.offset_layer)
+        fill_fc_weights(self.dimension_layer)
+        self._init_heatmap_layer()
+
         if from_pretrained:
             self.init_weights(from_pretrained)
-        else:
-            fill_fc_weights(self.offset_layer)
-            fill_fc_weights(self.dimension_layer)
+
+    def _init_heatmap_layer(self):
+        print("Initializing heatmap layer...")
+        self.heatmap_layer[-1].bias.data.fill_(-2.19)
 
     def init_weights(self, pretrained_path: str):
         print("Loading pretrained model...")
@@ -178,7 +183,6 @@ class PoseResNet(nn.Module):
             freeze_weight(self.bn1)
             freeze_weight(self.layer1)
             freeze_weight(self.layer2)
-            freeze_weight(self.layer3)
         except:
             print("Pretrained model not loaded")
 
