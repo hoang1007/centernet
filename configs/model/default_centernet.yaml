@@ -9,7 +9,7 @@ optimizer:
 scheduler:
   _target_: torch.optim.lr_scheduler.MultiStepLR
   _partial_: true
-  milestones: [30, 80]
+  milestones: [45, 80]
   gamma: 0.1
 
 gaussian_iou: 0.7

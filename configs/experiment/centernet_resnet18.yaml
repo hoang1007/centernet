@@ -14,7 +14,7 @@ defaults:
 
 tags: ["centernet", "resnet18", "voc2007"]
 
-seed: 188
+seed: 2002
 
 trainer:
   min_epochs: 10
