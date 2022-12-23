@@ -153,3 +153,6 @@ logs/
 
 # Test notebooks
 notebooks/*test*.ipynb
+
+# Checkpoints
+checkpoints/*.ckpt
